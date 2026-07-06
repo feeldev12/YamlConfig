@@ -1,0 +1,31 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+base {
+    archivesName = "yamlconfig"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnlyApi "org.slf4j:slf4j-api:2.0.7"
+    api "org.yaml:snakeyaml:1.8"
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
+}
