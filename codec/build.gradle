@@ -1,0 +1,12 @@
+repositories {
+    maven { url 'https://libraries.minecraft.net' }
+}
+
+dependencies {
+    api project(':core')
+
+    // Provided by the Minecraft runtime (Forge/Fabric/NeoForge all bundle DFU).
+    // Pin whatever version matches your target Minecraft version; this is a
+    // compile-time stub only, the actual jar comes from the game at runtime.
+    compileOnlyApi 'com.mojang:datafixerupper:8.0.16'
+}

@@ -18,6 +18,11 @@ public abstract class AbstractConfigSection {
         return current.get(keys[keys.length - 1]);
     }
 
+    /** Raw value at path (Map/List/String/Number/Boolean/null), as produced by SnakeYAML. */
+    public Object get(String path) {
+        return getValue(path);
+    }
+
     @SuppressWarnings("unchecked")
     public void set(String path, Object value) {
         String[] keys = path.split("\\.");

@@ -1,1 +1,3 @@
 rootProject.name = 'YamlConfig'
+
+include 'core', 'codec'
