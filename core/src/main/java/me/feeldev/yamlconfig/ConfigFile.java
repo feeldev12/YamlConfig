@@ -1,8 +1,6 @@
 package me.feeldev.yamlconfig;
 
 import org.slf4j.Logger;
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -29,14 +27,6 @@ public class ConfigFile extends AbstractConfigSection {
         this(logger, fileName, fileExtension, dataFolder);
     }
 
-    private static Yaml createYaml() {
-        DumperOptions options = new DumperOptions();
-        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        options.setPrettyFlow(true);
-        options.setIndent(2);
-        return new Yaml(options);
-    }
-
     private void createFile() {
         try {
             if (!fileName.endsWith(".yml")) {
@@ -47,7 +37,8 @@ public class ConfigFile extends AbstractConfigSection {
             }
             if (!file.exists()) {
                 if (!copyFromResources()) {
-                    file.getParentFile().mkdirs();
+                    File parent = file.getParentFile();
+                    if (parent != null) parent.mkdirs();
                     file.createNewFile();
                 }
             }
@@ -61,18 +52,18 @@ public class ConfigFile extends AbstractConfigSection {
     private boolean copyFromResources() throws IOException {
         InputStream resource = ConfigFile.class.getClassLoader().getResourceAsStream(fileName);
         if (resource == null) return false;
-        file.getParentFile().mkdirs();
+        File parent = file.getParentFile();
+        if (parent != null) parent.mkdirs();
         try (InputStream in = resource; OutputStream out = new FileOutputStream(file)) {
             in.transferTo(out);
         }
         return true;
     }
 
-    @SuppressWarnings("unchecked")
     private void loadFromDisk() throws IOException {
         try (Reader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-            Object raw = createYaml().load(reader);
-            this.data = raw instanceof Map ? new LinkedHashMap<>((Map<String, Object>) raw) : new LinkedHashMap<>();
+            ConfigurationSection parsed = ConfigurationSection.load(reader);
+            this.data = parsed.data;
         }
     }
 
@@ -86,9 +77,10 @@ public class ConfigFile extends AbstractConfigSection {
 
     public void save() {
         try {
-            file.getParentFile().mkdirs();
+            File parent = file.getParentFile();
+            if (parent != null) parent.mkdirs();
             try (Writer writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-                createYaml().dump(data, writer);
+                dump(writer);
             }
         } catch (IOException e) {
             logger.error("Save of the file '{}' failed.", fileName, e);

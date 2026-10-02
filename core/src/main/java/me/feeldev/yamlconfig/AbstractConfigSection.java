@@ -1,13 +1,34 @@
 package me.feeldev.yamlconfig;
 
+import org.yaml.snakeyaml.DumperOptions;
+import org.yaml.snakeyaml.Yaml;
+
+import java.io.Writer;
 import java.util.*;
 
 public abstract class AbstractConfigSection {
 
     protected Map<String, Object> data = new LinkedHashMap<>();
 
+    /** Normalizes SnakeYAML map keys to String recursively so numeric keys (0:) match Bukkit parity. */
+    @SuppressWarnings("unchecked")
+    public static Object normalizeValue(Object value) {
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> clean = new LinkedHashMap<>();
+            map.forEach((k, v) -> clean.put(String.valueOf(k), normalizeValue(v)));
+            return clean;
+        }
+        if (value instanceof List<?> list) {
+            List<Object> clean = new ArrayList<>();
+            for (Object item : list) clean.add(normalizeValue(item));
+            return clean;
+        }
+        return value;
+    }
+
     @SuppressWarnings("unchecked")
     protected Object getValue(String path) {
+        if (path == null || path.isEmpty()) return data;
         String[] keys = path.split("\\.");
         Map<String, Object> current = data;
         for (int i = 0; i < keys.length - 1; i++) {
@@ -30,17 +51,16 @@ public abstract class AbstractConfigSection {
         for (int i = 0; i < keys.length - 1; i++) {
             current = (Map<String, Object>) current.computeIfAbsent(keys[i], k -> new LinkedHashMap<>());
         }
-        current.put(keys[keys.length - 1], value);
+        current.put(keys[keys.length - 1], normalizeValue(value));
     }
 
     public String getString(String path) {
-        Object val = getValue(path);
-        return val != null ? String.valueOf(val) : null;
+        return getString(path, null);
     }
 
     public String getString(String path, String def) {
-        String val = getString(path);
-        return val != null ? val : def;
+        Object val = getValue(path);
+        return val != null ? String.valueOf(val) : def;
     }
 
     public int getInt(String path) {
@@ -49,7 +69,7 @@ public abstract class AbstractConfigSection {
 
     public int getInt(String path, int def) {
         Object val = getValue(path);
-        return val instanceof Number ? ((Number) val).intValue() : def;
+        return val instanceof Number num ? num.intValue() : def;
     }
 
     public double getDouble(String path) {
@@ -58,7 +78,7 @@ public abstract class AbstractConfigSection {
 
     public double getDouble(String path, double def) {
         Object val = getValue(path);
-        return val instanceof Number ? ((Number) val).doubleValue() : def;
+        return val instanceof Number num ? num.doubleValue() : def;
     }
 
     public long getLong(String path) {
@@ -67,7 +87,7 @@ public abstract class AbstractConfigSection {
 
     public long getLong(String path, long def) {
         Object val = getValue(path);
-        return val instanceof Number ? ((Number) val).longValue() : def;
+        return val instanceof Number num ? num.longValue() : def;
     }
 
     public boolean getBoolean(String path) {
@@ -76,14 +96,16 @@ public abstract class AbstractConfigSection {
 
     public boolean getBoolean(String path, boolean def) {
         Object val = getValue(path);
-        return val instanceof Boolean ? (Boolean) val : def;
+        return val instanceof Boolean bool ? bool : def;
     }
 
     public List<String> getStringList(String path) {
         Object val = getValue(path);
-        if (!(val instanceof List)) return new ArrayList<>();
+        if (!(val instanceof List<?> list)) return new ArrayList<>();
         List<String> result = new ArrayList<>();
-        for (Object item : (List<?>) val) result.add(String.valueOf(item));
+        for (Object item : list) {
+            if (item != null && !(item instanceof Map)) result.add(String.valueOf(item));
+        }
         return result;
     }
 
@@ -96,18 +118,44 @@ public abstract class AbstractConfigSection {
         return getValue(path) != null;
     }
 
+    /** Returns direct root keys in file order. */
+    public Set<String> getKeys() {
+        return Collections.unmodifiableSet(data.keySet());
+    }
+
     public Set<String> getKeys(boolean deep) {
-        if (!deep) return new LinkedHashSet<>(data.keySet());
+        if (!deep) return getKeys();
         Set<String> keys = new LinkedHashSet<>();
         collectKeys(data, "", keys);
         return keys;
     }
 
     @SuppressWarnings("unchecked")
-    public ConfigurationSection getConfigurationSection(String path) {
+    public ConfigurationSection getSection(String path) {
         Object val = getValue(path);
-        if (!(val instanceof Map)) return null;
-        return new ConfigurationSection((Map<String, Object>) val);
+        if (!(val instanceof Map<?, ?> map)) return null;
+        return new ConfigurationSection((Map<String, Object>) map);
+    }
+
+    /** Compatibility alias for Bukkit users. */
+    public ConfigurationSection getConfigurationSection(String path) {
+        return getSection(path);
+    }
+
+    public String dump() {
+        return createYaml().dump(data);
+    }
+
+    public void dump(Writer writer) {
+        createYaml().dump(data, writer);
+    }
+
+    protected static Yaml createYaml() {
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
+        options.setPrettyFlow(true);
+        options.setIndent(2);
+        return new Yaml(options);
     }
 
     @SuppressWarnings("unchecked")
@@ -115,8 +163,8 @@ public abstract class AbstractConfigSection {
         for (Map.Entry<String, Object> entry : map.entrySet()) {
             String key = prefix.isEmpty() ? entry.getKey() : prefix + "." + entry.getKey();
             result.add(key);
-            if (entry.getValue() instanceof Map) {
-                collectKeys((Map<String, Object>) entry.getValue(), key, result);
+            if (entry.getValue() instanceof Map<?, ?> sub) {
+                collectKeys((Map<String, Object>) sub, key, result);
             }
         }
     }
