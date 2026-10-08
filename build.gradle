@@ -9,6 +9,12 @@ java {
     withJavadocJar()
 }
 
+// Java 17 bytecode so Java 17 runtimes (e.g. Minecraft 1.20.1 mods/servers) can load it too.
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
 base {
     archivesName = "yamlconfig"
 }
