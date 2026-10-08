@@ -1,2 +1,3 @@
 jdk:
   - openjdk21
+image: ubuntu:22.04
