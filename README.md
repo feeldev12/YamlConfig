@@ -2,6 +2,8 @@
 
 Small YAML config layer for JVM projects (Minecraft mods/plugins or plain Java), extracted from Animorph's `common` module.
 
+Java 17 bytecode (since 1.2.1), so the same jars load on Minecraft 1.20.1 and 1.21+.
+
 Two modules:
 
 - `core` — the config layer. No Minecraft/loader coupling, only `slf4j-api` and `snakeyaml`.
@@ -15,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.feeldev12.YamlConfig:core:1.1.0'
+    implementation 'com.github.feeldev12.YamlConfig:core:1.2.1'
 }
 ```
 
@@ -36,7 +38,7 @@ If a file with the same name exists on the classpath (e.g. bundled under `src/ma
 
 ```groovy
 dependencies {
-    implementation 'com.github.feeldev12.YamlConfig:codec:1.1.0'
+    implementation 'com.github.feeldev12.YamlConfig:codec:1.2.1'
     // com.mojang:datafixerupper is compileOnlyApi — provided by the Minecraft
     // runtime (Forge/Fabric/NeoForge all bundle it). Nothing extra to add in a mod.
 }
